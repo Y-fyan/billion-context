@@ -58,7 +58,8 @@ for (const shape of ["one-interior-survivor", "all-missing", "small-zombie"] as 
                 if (shape === "all-missing") {
                     assert.equal(session.state.blocks.length, 1);
                     assert.equal(session.state.blocks[0].active, false);
-                    assert.equal(session.metadata.foldEpochConfirmPending === true, false);
+                    assert.equal(session.metadata.foldEpochConfirmPending === true, pass >= 3,
+                        "total replacement pauses folding for confirmation while retaining the snapshot (#3641)");
                 }
             }
             assert.equal(session.blockContents.get(blockId)?.full.text, original);

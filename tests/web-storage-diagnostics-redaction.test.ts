@@ -7,7 +7,7 @@
 // identifying $HOME prefixes rewritten to ~ — regardless of the local
 // BILI_LOG_MASK_HOSTS preference, and equivalently in the copied blob AND the
 // prefilled issue body.
-import test from "node:test";
+import test, { mock } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -38,6 +38,7 @@ function restoreEnv(snap: EnvSnap): void {
 function withEnv<T>(home: string | undefined, overrides: Record<string, string | undefined>, fn: () => T): T {
     const saved = saveEnv();
     const savedHome = process.env.HOME;
+    const homeMock = home === undefined ? undefined : mock.method(os, "homedir", () => home);
     if (home !== undefined) process.env.HOME = home;
     for (const k of ENV_KEYS) {
         if (overrides[k] !== undefined) process.env[k] = overrides[k];
@@ -46,6 +47,7 @@ function withEnv<T>(home: string | undefined, overrides: Record<string, string |
     try {
         return fn();
     } finally {
+        homeMock?.mock.restore();
         restoreEnv(saved);
         if (savedHome === undefined) delete process.env.HOME;
         else process.env.HOME = savedHome;
@@ -54,6 +56,7 @@ function withEnv<T>(home: string | undefined, overrides: Record<string, string |
 
 test("#4427 maskPathsForPublish rewrites this machine's $HOME to ~, anchored on both flanks", () => {
     const savedHome = process.env.HOME;
+    const homeMock = mock.method(os, "homedir", () => "/home/alice");
     process.env.HOME = "/home/alice";
     try {
         assert.equal(maskPathsForPublish("/home/alice/.local/share/billion-context/x.db"), "~/.local/share/billion-context/x.db");
@@ -66,6 +69,7 @@ test("#4427 maskPathsForPublish rewrites this machine's $HOME to ~, anchored on 
         assert.equal(maskPathsForPublish("https://relay.internal/home/alice/doc.pdf"), "https://relay.internal/home/alice/doc.pdf", "URL pathname not rewritten");
         assert.equal(maskPathsForPublish("~/.already-tilded"), "~/.already-tilded", "idempotent on already-tilded text");
     } finally {
+        homeMock.mock.restore();
         if (savedHome === undefined) delete process.env.HOME;
         else process.env.HOME = savedHome;
     }
@@ -73,6 +77,7 @@ test("#4427 maskPathsForPublish rewrites this machine's $HOME to ~, anchored on 
 
 test("#4427 redactForPublish composes secret scrub + host mask + home-path strip in one pass", () => {
     const savedHome = process.env.HOME;
+    const homeMock = mock.method(os, "homedir", () => "/home/bob");
     process.env.HOME = "/home/bob";
     try {
         const out = redactForPublish("probe https://user:SecretPass@db.internal:3306/app?token=FAKE_TOKEN at /home/bob/.cache/x authorization: bearer sk-live-abcdef1234567890 failed");
@@ -85,6 +90,7 @@ test("#4427 redactForPublish composes secret scrub + host mask + home-path strip
         assert.ok(!out.includes("sk-live-abcdef1234567890"), "bearer token scrubbed");
         assert.ok(out.includes("<masked"), "redaction marker visible");
     } finally {
+        homeMock.mock.restore();
         if (savedHome === undefined) delete process.env.HOME;
         else process.env.HOME = savedHome;
     }
