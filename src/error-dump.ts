@@ -17,6 +17,8 @@ import { safePrefix } from "./text-safe.js";
 
 let failCount = 0;
 let lastFailLog = 0;
+const DUMP_HEADER = `${DUMP_PLAINTEXT_BANNER}\n`;
+const DUMP_HEADER_BYTES = Buffer.byteLength(DUMP_HEADER);
 
 function warnDumpFailure(err: unknown): void {
     failCount++;
@@ -56,7 +58,7 @@ export function dumpRejectedBody(status: number, sessionId: string, body: string
     const raw = typeof body === "string" ? body : body.toString("utf8");
     if (!raw) return null;
     try {
-        const cap = knobDump4xxMaxBytes();
+        const cap = knobDump4xxMaxBytes() - DUMP_HEADER_BYTES;
         let text = raw;
         if (Buffer.byteLength(raw) <= cap) {
             try { text = JSON.stringify(JSON.parse(raw), null, 2); } catch { /* keep non-JSON bodies raw */ }
@@ -66,7 +68,7 @@ export function dumpRejectedBody(status: number, sessionId: string, body: string
         fs.mkdirSync(dir, { recursive: true });
         const sid = sessionId.replace(/[^a-zA-Z0-9_-]/g, "_");
         const out = path.join(dir, `err-${Date.now()}-${sid}-${status}.json`);
-        fs.writeFileSync(out, `${DUMP_PLAINTEXT_BANNER}\n${text}`);
+        fs.writeFileSync(out, DUMP_HEADER + text);
         loggerLog("info", `[dump] upstream ${status} rejected body written to ${out}`);
         gcDumpDirIfConfigured(dir);
         return out;
@@ -89,7 +91,7 @@ export function dumpSummaryRejection(status: number, sessionId: string, request:
     if (!knobDump4xxEnabled()) return null;
     if (!request && !response) return null;
     try {
-        const cap = knobDump4xxMaxBytes();
+        const cap = knobDump4xxMaxBytes() - DUMP_HEADER_BYTES;
         const side = (raw: string): string => {
             if (Buffer.byteLength(raw) > cap) return raw;
             try { return JSON.stringify(JSON.parse(raw)); } catch { return raw; }
@@ -110,7 +112,7 @@ export function dumpSummaryRejection(status: number, sessionId: string, request:
         fs.mkdirSync(dir, { recursive: true });
         const sid = sessionId.replace(/[^a-zA-Z0-9_-]/g, "_");
         const out = path.join(dir, `summary-err-${Date.now()}-${sid}-${status}.json`);
-        fs.writeFileSync(out, `${DUMP_PLAINTEXT_BANNER}\n${JSON.stringify(envelope, null, 2)}`);
+        fs.writeFileSync(out, DUMP_HEADER + JSON.stringify(envelope, null, 2));
         loggerLog("info", `[dump] upstream ${status} rejected summary exchange written to ${out}`);
         gcDumpDirIfConfigured(dir);
         return out;
