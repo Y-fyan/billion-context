@@ -14,9 +14,8 @@
 //     is overridden below the chain join) AND the main-lane judge verdict
 //     for that forward is CLEAN. Before the fix this fires I2
 //     mid-history-rewrite — the exact #4241 report.
-//  2. teeth: the same shape with an injected exit defect (a frozen-prefix
-//     row dropped from the outbound) still FIRES — the baseline swap blinds
-//     the judge to legitimate divergence, not to defects.
+//  2. teeth: dropping a client-tail row still FIRES. The server-rendered
+//     prefix is exempt from this judge; its actual bytes are asserted below.
 import assert from "node:assert/strict";
 import http from "node:http";
 import { once } from "node:events";
@@ -249,14 +248,19 @@ test("#4241: render turn with a host-side history edit — judge reconciles agai
                 assert.ok(v.ok, `main-lane verdict must be clean on a render turn: ${JSON.stringify(v.violations[0])}`);
             }
 
-            // teeth: same shape, but the outbound DROPS a frozen-prefix row —
-            // the judge must fire against the baseline (the swap must not
-            // blind it to real defects).
-            _setInvariantJudgeFaultForTest((exitCores: CoreMessage[]) => exitCores.filter((_, i) => i !== 3));
+            // The render-tail judge owns the live client tail, not the
+            // server-authored prefix. Drop a real tail row as its control.
+            let dropped = 0;
+            _setInvariantJudgeFaultForTest((exitCores: CoreMessage[]) => {
+                const kept = exitCores.filter(m => !m.text?.includes("TAIL_B_"));
+                dropped += exitCores.length - kept.length;
+                return kept;
+            });
             verdicts.length = 0;
             const r3 = await turn(h, [...full2, { role: "user", content: "And one more. " + "TAIL_B_".repeat(80) }], label, null);
             assert.equal(r3.status, 200, r3.body);
             _setInvariantJudgeFaultForTest(null);
+            assert.ok(dropped > 0, "the fault actually removed the live tail");
             const main3 = verdicts.filter((v) => v.lane === "main");
             assert.ok(main3.length >= 1, "judge ran on the faulted forward");
             assert.ok(main3.some((v) => !v.ok), "exit defect on a render turn still fires (teeth intact)");

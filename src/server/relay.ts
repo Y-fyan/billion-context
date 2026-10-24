@@ -757,14 +757,12 @@ export async function forward(
             ? (prepared.session.metadata["snapshotRenderTailStart"] as number)
             : undefined;
         maybeRunInvariantJudge({
-            // #4241: a render-lane turn's outbound is built from the SERVER
-            // transcript (summary anchors + store rows), so its ground truth
-            // is the rendered view — reconciling the client's inbound bytes
-            // against it false-positives I2 on every folded render turn.
-            // judgeBaseline is set only when the view was actually replaced
-            // (reference-inequality); otherwise this is byte-identical to
-            // prepared.originalMessages.
-            originalMessages: prepared.judgeBaseline ?? prepared.originalMessages,
+            // #4241: renderTailStart indexes the client's original transcript, not
+            // the shorter rendered view. Mixing those coordinate systems can
+            // skip the entire live tail and silently accept a dropped row.
+            originalMessages: renderTailStart !== undefined
+                ? prepared.originalMessages
+                : prepared.judgeBaseline ?? prepared.originalMessages,
             body: sentBody,
             protocol: prepared.protocol,
             sessionId: prepared.session.id,
