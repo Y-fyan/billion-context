@@ -276,11 +276,15 @@ jobs:
       # run-ci-tests.mjs below. The hashFiles patterns MUST stay in sync with
       # the input tables in scripts/ci-pretest-cache.mjs.
       - name: Restore kernel dist cache (#4360)
+        # Fork validation: rebuild after checkout so golden freshness checks
+        # cannot reject restored timestamps (#4548).
+        if: github.repository != 'Y-fyan/billion-context'
         uses: actions/cache@v4
         with:
           path: kernel/dist
           key: pretest-dist-kernel-v1-${{ runner.os }}-${{ hashFiles('kernel/src/**', 'kernel/tsup.config.ts', 'kernel/tsconfig.json', 'kernel/package.json', 'kernel/package-lock.json', 'package-lock.json') }}
       - name: Restore pi-subagents dist cache (#4360)
+        if: github.repository != 'Y-fyan/billion-context'
         uses: actions/cache@v4
         with:
           path: pi-subagents/dist
