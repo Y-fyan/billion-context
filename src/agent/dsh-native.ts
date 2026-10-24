@@ -1284,7 +1284,7 @@ function noteForkVerdict(verdict: Extract<ForkChildVerdict, { ok: false }>): voi
             // exactly what #4215 needs named in the log (C10b).
             if (noticedForkBlindSpot) return;
             noticedForkBlindSpot = true;
-            const scoped = sidScope.getStore();
+            const scoped = dispatchScope.getStore()?.sid;
             const scopedActive = typeof scoped === "string" && scoped.length > 0;
             const shape =
                 verdict.reason === "initiator-threw" ? `threw (${verdict.detail ?? "unknown"})`
