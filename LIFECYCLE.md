@@ -149,6 +149,7 @@
 | `BILI_CLIENT_BIN` | native 可执行文件覆盖（probe 契约同 launcher） |
 | `BILI_CONVERSATION_ID` | codex spawn 期会话注册（CLAUDE_CODE_SESSION_ID 优先） |
 | `BILI_MCP_PROXY` | codex MCP shell 用的 proxy origin（含发现回退） |
+| `BILI_CODEX_STATE_MODE` | Codex 状态库兼容策略（#2222/#3203）：默认 auto；shared 使用 CODEX_SQLITE_HOME 共享库，不支持时告警回退；legacy 保留独占 overlay 的拷贝/合并路径 |
 | `BILI_MCP_DEFAULT_ORIGIN` | zcode MCP entry 默认 origin（http://127.0.0.1:8787） |
 | `BILI_MCP_NO_ORPHAN_ADOPT` | `=1` 多宿主共享一个 proxy 时禁用孤儿 adopt |
 | `BILI_UPSTREAM_PROXY` / `BILI_UPSTREAM_PROXY_MODE` | 上游出口代理及 manual/auto 模式（默认直连是有意设计，#346/#357） |
