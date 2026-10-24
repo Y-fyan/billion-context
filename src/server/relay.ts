@@ -721,7 +721,7 @@ async function forwardCaptured(
         if (typeof declaredWindow === "number" && Number.isFinite(declaredWindow) && declaredWindow > 0
             && calibratedHere && scaledText > Math.max(declaredWindow, MIN_ASSUMED_WINDOW_TOKENS)) {
             const message = `outbound text and wire overhead are estimated at ~${Math.ceil(scaledText)} tokens, calibrated on this upstream and model (${prepared.model}), vs the effective model window ${declaredWindow} (bars never assume below ${MIN_ASSUMED_WINDOW_TOKENS} tokens, #4079); the send was stopped at the egress fuse instead of being forwarded (#4543). Compress or trim the history, or return to a model with a larger window, and retry.`;
-            log("warn", `[${prepared.session.id}] egress window fuse: ${message}`);
+            log("warn", `413: [${prepared.session.id}] egress window fuse: ${message}`);
             if (res.headersSent) emitStreamError(res, prepared.protocol, message, undefined, opts.streamErrorShape);
             else {
                 res.writeHead(413, { "content-type": "application/json" });
